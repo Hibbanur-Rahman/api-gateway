@@ -1,7 +1,7 @@
 {
-  "name": "turant-logistics-api-gateway",
+  "name": "api-gateway",
   "version": "1.0.0",
-  "description": "API Gateway for Turant Logistics Microservices",
+  "description": "API Gateway for Microservices",
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
@@ -12,10 +12,9 @@
   },
   "keywords": [
     "api-gateway",
-    "microservices",
-    "turant-logistics"
+    "microservices"
   ],
-  "author": "Ghulam Mustafa",
+  "author": "Hibbanur Rahman",
   "license": "ISC",
   "dependencies": {
     "body-parser": "^2.2.0",
