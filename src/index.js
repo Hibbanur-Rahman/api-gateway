@@ -11,6 +11,7 @@ const { gatewayAuthMiddleware } = require("./middleware/auth.middleware");
 const bodyParser = require("body-parser");
 const cookieParser = require("cookie-parser");
 const http = require("http");
+const multer = require("multer");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -45,9 +46,13 @@ const logger = winston.createLogger({
  */
 
 // Enable CORS
+const allowedOrigins = process.env.CORS_ORIGIN
+  ? process.env.CORS_ORIGIN.split(",").map((origin) => origin.trim())
+  : ["*"];
+console.log("Allowed CORS origins:", allowedOrigins);
 app.use(
   cors({
-    origin: process.env.CORS_ORIGIN || "*",
+    origin: allowedOrigins,
     optionsSuccessStatus: 200,
     methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
     allowedHeaders:
@@ -56,8 +61,7 @@ app.use(
   }),
 );
 
-// Enable JSON parsing
-app.use(express.json());
+
 
 // Request logging middleware
 app.use((req, res, next) => {
@@ -73,32 +77,23 @@ app.use(helmet());
 app.use(compression());
 
 // Rate limiting
-const limiter = rateLimit({
-  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 900000, // 15 minutes
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100,
-  message: {
-    success: false,
-    message: "Too many requests from this IP, please try again later",
-    timestamp: new Date().toISOString(),
-  },
-});
-app.use(limiter);
+// const limiter = rateLimit({
+//   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 900000, // 15 minutes
+//   max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100,
+//   message: {
+//     success: false,
+//     message: "Too many requests from this IP, please try again later",
+//     timestamp: new Date().toISOString(),
+//   },
+// });
+// app.use(limiter);
 
 // Body parsing middleware
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true, limit: "50mb" }));
+// IMPORTANT: We let express-http-proxy handle ALL body parsing
+// This avoids stream consumption issues where Express parses the body
+// and then the proxy can't read it again
+// The proxy will parse JSON/URL-encoded and stream multipart correctly
 app.use(cookieParser());
-
-// Raw body parsing for file uploads
-app.use((req, res, next) => {
-  if (
-    req.headers["content-type"] &&
-    req.headers["content-type"].includes("multipart/form-data")
-  ) {
-    return next();
-  }
-  bodyParser.raw({ type: "*/*", limit: "50mb" })(req, res, next);
-});
 
 // Request timeout middleware
 app.use((req, res, next) => {
@@ -157,6 +152,11 @@ app.get("/gateway/health", (req, res) => {
 app.use(
   "/api/authz",
   proxy(AUTH_SERVICE_URL, {
+    limit: '50mb',
+    parseReqBody: function (req) {
+      // Only skip parsing for multipart - parse everything else
+      return !req.headers['content-type'] || !req.headers['content-type'].includes('multipart/form-data');
+    },
     proxyReqPathResolver: function (req) {
       // Convert /register to /api/register for auth service
       const originalPath = req.url;
@@ -192,6 +192,11 @@ app.use(
 app.use(
   "/api/iam",
   proxy(IAM_SERVICE_URL, {
+    limit: '50mb',
+    parseReqBody: function (req) {
+      // Only skip parsing for multipart - parse everything else
+      return !req.headers['content-type'] || !req.headers['content-type'].includes('multipart/form-data');
+    },
     proxyReqPathResolver: function (req) {
       // Convert /register to /api/register for auth service
       const originalPath = req.url;
@@ -227,6 +232,11 @@ app.use(
 app.use(
   "/api/inv",
   proxy(INVENTORY_SERVICE_URL, {
+    limit: '50mb',
+    parseReqBody: function (req) {
+      // Only skip parsing for multipart - parse everything else
+      return !req.headers['content-type'] || !req.headers['content-type'].includes('multipart/form-data');
+    },
     proxyReqPathResolver: function (req) {
       // Convert /register to /api/register for auth service
       const originalPath = req.url;
@@ -262,6 +272,11 @@ app.use(
 app.use(
   "/api/cus",
   proxy(CUSTOMER_SERVICE_URL, {
+    limit: '50mb',
+    parseReqBody: function (req) {
+      // Only skip parsing for multipart - parse everything else
+      return !req.headers['content-type'] || !req.headers['content-type'].includes('multipart/form-data');
+    },
     proxyReqPathResolver: function (req) {
       // Convert /register to /api/register for auth service
       const originalPath = req.url;
@@ -296,6 +311,11 @@ app.use(
 app.use(
   "/api/whms",
   proxy(WAREHOUSE_SERVICE_URL, {
+    limit: '50mb',
+    parseReqBody: function (req) {
+      // Only skip parsing for multipart - parse everything else
+      return !req.headers['content-type'] || !req.headers['content-type'].includes('multipart/form-data');
+    },
     proxyReqPathResolver: function (req) {
       const originalPath = req.url;
       const newPath = "/api/whms" + originalPath;
